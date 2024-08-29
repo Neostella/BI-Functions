@@ -7,7 +7,11 @@ setup(
     install_requires=[
         'psycopg2-binary',
         'python-dotenv',
+        'yaml',
+        'pandas',
+        'sys'
     ],
+    
     include_package_data=True,
     description='A library of functions for BI applications',
     author='Your Name',
