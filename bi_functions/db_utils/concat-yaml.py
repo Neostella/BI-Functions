@@ -1,6 +1,7 @@
 import yaml
 import pandas as pd
 import sys
+from settings import DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD, OUTPUT_DIR, DB_SCHEMA, VIEW_GRANT_USER
 
 
 def read_template(template_file):
@@ -36,18 +37,30 @@ def replace_variables(variables, objects):
             objects = objects.replace(f"{{{{{var_name}}}}}", str(value.get("default")))
     return objects
 
+def connect_to_db():
+    from sqlalchemy import create_engine
+    return create_engine(
+        url="postgresql://{0}:{1}@{2}:{3}/{4}".format(
+            DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME
+        )
+    )
 
-def read_schema(template_file, section_name,csv_template_location, order_file_txt = None):
 
-    if "/" in section_name:
-        section_name_file_name = "_".join(section_name.lower().split("/"))
-    else:
-        section_name_file_name = "_".join(section_name.lower().split(" "))
-    df = pd.read_csv(csv_template_location)
+def read_schema(variables, section_name,csv_template_location, order_file_txt = None):
+   
+    # if "/" in section_name:
+    #     section_name_file_name = "_".join(section_name.lower().split("/"))
+    # else:
+    #     section_name_file_name = "_".join(section_name.lower().split(" "))
 
-    filtered_template = df[
-        (df["section_name"] == section_name) | (df["section_selector"] == section_name)
+    if csv_template_location != 'aurora':
+        df = pd.read_csv(csv_template_location)
+        filtered_template = df[
+            (df["section_name"] == section_name) | (df["section_selector"] == section_name)
     ]
+    else :
+        import re
+        filtered_template = read_from_aurora(variables, re)
 
     if order_file_txt != None:
 
@@ -56,6 +69,40 @@ def read_schema(template_file, section_name,csv_template_location, order_file_tx
 
     else :
         return filtered_template
+
+def read_from_aurora(variables, re):
+    pattern = r'current\."fvdw_(Form|Collection)_(\d+)_(\w+)"'
+    match = re.search(pattern, variables["original_table_name"]["default"])
+
+    if match:
+        project_type_id = match.group(2)
+        section_name = match.group(3)
+        print(f'section_name = {section_name}')
+        print(f'project_type_id = {project_type_id}')
+
+    conn = connect_to_db()
+    query = f"""SELECT
+                        PTF.*,
+                        CASE
+                            WHEN PTS."isCollection" THEN 'collections'
+                            ELSE 'form'
+                        END "sectionType"
+                    FROM
+                        CURRENT."fvdw_ProjectType_Sections" PTS
+                        join CURRENT."fvdw_ProjectType_Fields" PTF ON PTF."sectionSelector" = PTS."sectionSelector"
+                        AND PTF."projectTypeId" = {project_type_id}
+                        AND PTF."sectionSelector" = '{section_name}'
+                        AND PTS."projectTypeId" = {project_type_id}"""
+    print("#"*50 + " QUERY " + "#"*50)
+    print(f"{query}")
+    section_fields = pd.read_sql(query,conn)
+    ordered_section_map_dataframe = section_fields.rename({
+            "fieldSelector" : "field_selector",
+            "name" : "field_name",
+            "projectTypeId" : "customFieldType"
+        }, axis=1,inplace=False)
+    
+    return section_fields
 
 
 
@@ -291,7 +338,7 @@ if __name__ == "__main__":
         .get("default")
     )
 
-    schema_df = read_schema(template_file=template_file
+    schema_df = read_schema(variables=variables
                             ,csv_template_location=csv_template_location
                             ,section_name=section_name
                             ,order_file_txt=order_file_txt)
