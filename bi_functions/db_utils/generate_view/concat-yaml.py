@@ -71,7 +71,7 @@ def read_schema(variables, section_name,csv_template_location, order_file_txt = 
         return filtered_template
 
 def read_from_aurora(variables, re):
-    pattern = r'current\."fvdw_(Form|Collection)_(\d+)_(\w+)"'
+    pattern = r'current\."fvdw_(Form|CollectionItem)_(\d+)_(\w+)"'
     match = re.search(pattern, variables["original_table_name"]["default"])
 
     if match:
