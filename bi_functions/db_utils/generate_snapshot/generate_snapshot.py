@@ -5,6 +5,8 @@ import psycopg2
 from psycopg2 import sql
 from settings import DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD, OUTPUT_DIR, DB_SCHEMA, VIEW_GRANT_USER
 
+show_view_creation_header = False
+
 def clear_output_directory(directory):
     """
     Clear all files in the output directory.
@@ -51,19 +53,24 @@ def save_view_to_file(view_name, view_definition_record):
 
     output_path = os.path.join(OUTPUT_DIR, f"{view_name}.sql")
     with open(output_path, "w") as file:
-        view_content =f"""
-        --
-        -- Name: "{view_definition_record["viewname"]}"; Type: VIEW; Schema: {DB_SCHEMA}; Owner: "{view_definition_record["viewowner"]}"
-        --
-        DROP VIEW {DB_SCHEMA}."{view_definition_record["viewname"]}";
+        if show_view_creation_header:
+            view_content =f"""
+            --
+            -- Name: "{view_definition_record["viewname"]}"; Type: VIEW; Schema: {DB_SCHEMA}; Owner: "{view_definition_record["viewowner"]}"
+            --
+            DROP VIEW {DB_SCHEMA}."{view_definition_record["viewname"]}";
 
-        CREATE VIEW {DB_SCHEMA}."{view_definition_record["viewname"]}" AS
-        {view_definition_record["definition"]}
+            CREATE VIEW {DB_SCHEMA}."{view_definition_record["viewname"]}" AS
+            {view_definition_record["definition"]}
 
-        ALTER VIEW {DB_SCHEMA}."{view_definition_record["viewname"]}" OWNER TO "{view_definition_record["viewowner"]}";
+            ALTER VIEW {DB_SCHEMA}."{view_definition_record["viewname"]}" OWNER TO "{view_definition_record["viewowner"]}";
 
-        GRANT ALL ON TABLE {DB_SCHEMA}."{view_definition_record["viewname"]}" TO "{VIEW_GRANT_USER}";
-        """
+            GRANT ALL ON TABLE {DB_SCHEMA}."{view_definition_record["viewname"]}" TO "{VIEW_GRANT_USER}";
+            """
+        else :
+            view_content =f"""
+            {view_definition_record["definition"]}
+            """        
         file.write(view_content)
 
 def main():
