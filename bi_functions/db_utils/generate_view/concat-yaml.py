@@ -327,11 +327,6 @@ if __name__ == "__main__":
     order_file_txt = variables.get("order_file_txt",{}).get("default")
     csv_template_location = variables["csv_template_location"]["default"]
 
-
-    SELECT_SENTENCE = " SELECT "
-    FROM_SENTENCE = "FROM "
-    MANDATORY_COLUMNS_FOR_COLLECTIONS = 'cs."projectId" ,cs."itemId"'
-    MANDATORY_COLUMNS_FOR_FORM = 'cs."projectId'
     additional_columns_to_show = (
         read_template(template_file)[0]
         .get("additional_columns_to_show", {})

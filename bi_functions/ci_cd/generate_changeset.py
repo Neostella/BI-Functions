@@ -5,13 +5,14 @@ from git import Repo
 import argparse
 
 # Constants
-ROOT_DIR = 'C:/Users/juan.garcia/bi-analytics-witherite/bi-analytics-witherite'
+DB_NAME= "fvdw_shOrgId_d226"
+ROOT_DIR = 'C:/Users/juan.garcia/bi-analytics-blg/BI-Analytics-BLG'
 REPO_PATH = os.path.join(ROOT_DIR)  # Repo path
-CHANGESET_DIR = os.path.join(ROOT_DIR, 'liquibase/changelogs/changesets')
-SQL_FILES_PATH = 'db/views/'
+CHANGESET_DIR = os.path.join(ROOT_DIR, f'changelogs/{DB_NAME}/changesets')
+SQL_FILES_PATH = f'db/{DB_NAME}/views'
 GIT_USERNAME = "github-actions[bot]"
 GIT_EMAIL = "github-actions[bot]@users.noreply.github.com"
-VIEW_OWNER = "neo-juangarcia"
+VIEW_OWNER = "neo-dw-support"
 ENV = 'current'
 
 def run_command(command):
@@ -24,10 +25,13 @@ def run_command(command):
 
 def get_modified_sql_files(branch_to_compare):
     """Fetch the list of modified SQL files compared to the 'main' branch."""
+    run_command(f'cd {ROOT_DIR} && git checkout main')
     run_command(f'cd {ROOT_DIR} && git pull origin main:main')
     run_command(f'cd {ROOT_DIR} && git fetch --all')
-    print(run_command(f'cd {ROOT_DIR} && git branch -r'))
-    diff_files = run_command(f'cd {ROOT_DIR} && git diff --name-only origin/main origin/{branch_to_compare} -- {SQL_FILES_PATH}*.sql')
+    run_command(f'cd {ROOT_DIR} && git checkout {branch_to_compare}')
+    run_command(f'cd {ROOT_DIR} && git fetch origin')
+    run_command(f'cd {ROOT_DIR} && git rebase origin/main')
+    diff_files = run_command(f'cd {ROOT_DIR} && git diff --name-only origin/main {branch_to_compare} -- {SQL_FILES_PATH}*.sql')
     return diff_files.splitlines()
 
 def create_changeset_file(sql_file, pr_author, changeset_id, timestamp):
@@ -59,16 +63,16 @@ def create_changeset_file(sql_file, pr_author, changeset_id, timestamp):
 
         f.write(f"\n\n")
         f.write(f"ALTER VIEW {ENV}.\"{view_name}\" OWNER TO \"{VIEW_OWNER}\"; \n\n")
-        f.write(f"""
-            GRANT ALL ON TABLE {ENV}.\"{view_name}\" TO "neo-bi-support-group";
-            GRANT SELECT ON TABLE {ENV}.\"{view_name}\" TO "corey.maxedon";
-            GRANT ALL ON TABLE {ENV}.\"{view_name}\" TO "neo-dw-support";
-            GRANT SELECT ON TABLE {ENV}.\"{view_name}\" TO "data_analyst";
-            GRANT SELECT ON TABLE {ENV}.\"{view_name}\" TO "neo-guillermogallo";
-            GRANT ALL ON TABLE {ENV}.\"{view_name}\" TO "neo-ml-support";
-            GRANT SELECT ON TABLE {ENV}.\"{view_name}\" TO "smriti.dewangan";
-            GRANT SELECT ON TABLE {ENV}.\"{view_name}\" TO "sonali.mehere";
-            """)
+        # f.write(f"""
+        #     GRANT ALL ON TABLE {ENV}.\"{view_name}\" TO "neo-bi-support-group";
+        #     GRANT SELECT ON TABLE {ENV}.\"{view_name}\" TO "corey.maxedon";
+        #     GRANT ALL ON TABLE {ENV}.\"{view_name}\" TO "neo-dw-support";
+        #     GRANT SELECT ON TABLE {ENV}.\"{view_name}\" TO "data_analyst";
+        #     GRANT SELECT ON TABLE {ENV}.\"{view_name}\" TO "neo-guillermogallo";
+        #     GRANT ALL ON TABLE {ENV}.\"{view_name}\" TO "neo-ml-support";
+        #     GRANT SELECT ON TABLE {ENV}.\"{view_name}\" TO "smriti.dewangan";
+        #     GRANT SELECT ON TABLE {ENV}.\"{view_name}\" TO "sonali.mehere";
+        #     """)
 
     # Replace SQL patterns in the generated changeset
     # run_command(
@@ -84,7 +88,7 @@ def commit_and_push_changes():
     run_command(f'git config --global user.name "{GIT_USERNAME}"')
     run_command(f'git config --global user.email "{GIT_EMAIL}"')
     run_command(f'git add {CHANGESET_DIR}/*.sql')
-    run_command('git commit -m "Auto-generate changesets for SQL deployment"')
+    run_command(f'git commit -m "view deployed Auto-generate changesets for SQL deployment"')
     run_command('git push origin HEAD')
 
 def main(branch):
@@ -104,6 +108,8 @@ def main(branch):
     for sql_file in modified_sql_files:
         create_changeset_file(sql_file, pr_author, changeset_id, timestamp)
 
+    diff_files = run_command(f'cd {ROOT_DIR} && git diff --name-only origin/main {branch} -- {SQL_FILES_PATH}*.sql')
+    print(f'git commit -m "view deployed({diff_files}) Auto-generate changesets for SQL deployment"')
     # commit_and_push_changes()
 
 if __name__ == '__main__':
