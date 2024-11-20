@@ -53,16 +53,16 @@ def create_changeset_file(sql_file, pr_author, changeset_id, timestamp):
         f.write(f"--comment Auto-generated changeset from {sql_file}\n")
         f.write(f"--timestamp {timestamp}\n\n")
         f.write(f"-- From: {sql_file}\n")
-        f.write(f"DROP VIEW IF EXISTS {ENV}.\"{view_name}\";\n\n")
-        f.write(f"CREATE VIEW {ENV}.\"{view_name}\" AS \n\n")
+        #f.write(f"DROP VIEW IF EXISTS {ENV}.\"{view_name}\";\n\n")
+        #f.write(f"CREATE VIEW {ENV}.\"{view_name}\" AS \n\n")
 
 
         sql_file_path = os.path.join(ROOT_DIR,sql_file)
         with open(sql_file_path, 'r') as original_file:
             f.write(original_file.read())
 
-        f.write(f"\n\n")
-        f.write(f"ALTER VIEW {ENV}.\"{view_name}\" OWNER TO \"{VIEW_OWNER}\"; \n\n")
+        #f.write(f"\n\n")
+        #f.write(f"ALTER VIEW {ENV}.\"{view_name}\" OWNER TO \"{VIEW_OWNER}\"; \n\n")
         # f.write(f"""
         #     GRANT ALL ON TABLE {ENV}.\"{view_name}\" TO "neo-bi-support-group";
         #     GRANT SELECT ON TABLE {ENV}.\"{view_name}\" TO "corey.maxedon";
