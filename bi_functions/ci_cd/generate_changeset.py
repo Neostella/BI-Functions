@@ -3,17 +3,9 @@ import subprocess
 import datetime
 from git import Repo
 import argparse
+import subprocess
+from settings import *
 
-# Constants
-DB_NAME= "fvdw_shOrgId_d226"
-ROOT_DIR = 'C:/Users/juan.garcia/bi-analytics-blg/BI-Analytics-BLG'
-REPO_PATH = os.path.join(ROOT_DIR)  # Repo path
-CHANGESET_DIR = os.path.join(ROOT_DIR, f'changelogs/{DB_NAME}/changesets')
-SQL_FILES_PATH = f'db/{DB_NAME}/views'
-GIT_USERNAME = "github-actions[bot]"
-GIT_EMAIL = "github-actions[bot]@users.noreply.github.com"
-VIEW_OWNER = "neo-dw-support"
-ENV = 'current'
 
 def run_command(command):
     """Utility to run shell commands."""
@@ -109,6 +101,10 @@ def main(branch):
         create_changeset_file(sql_file, pr_author, changeset_id, timestamp)
 
     diff_files = run_command(f'cd {ROOT_DIR} && git diff --name-only origin/main {branch} -- {SQL_FILES_PATH}*.sql')
+
+    
+    result = subprocess.run(["liquibase.bat", "status", "--verbose"], cwd=CHANGELOG_DIR, capture_output=True, text=True)
+    print(result.stdout)
     print(f'git commit -m "view deployed({diff_files}) Auto-generate changesets for SQL deployment"')
     # commit_and_push_changes()
 
@@ -117,8 +113,41 @@ if __name__ == '__main__':
     parser.add_argument(
         '--branch', 
         type=str, 
-        required=True, 
+        required=False, 
         help='The branch to compare against the main branch.'
     )
+    parser.add_argument(
+        '--deploy', 
+        required=False, 
+        action='store_true',
+        help='Deploy the changeset.'
+    )
+    parser.add_argument(
+        '--test', 
+        required=False, 
+        action='store_true',
+        help='Test the changeset.'
+    )
+    parser.add_argument(
+        '--commit', 
+        required=False, 
+        type=str,
+        help='Test the changeset.'
+    )
+
     args = parser.parse_args()
-    main(args.branch)
+
+    if args.branch :
+        main(args.branch)
+    elif args.test :
+        result = subprocess.run(["liquibase.bat", "updateSQL"], cwd=CHANGELOG_DIR, capture_output=True, text=True)
+        print(result.stdout)
+    elif args.deploy :
+        result = subprocess.run(["liquibase.bat", "update"], cwd=CHANGELOG_DIR, capture_output=True, text=True)
+        print(result.stdout)
+    elif args.commit :
+        # run_command(f'cd {ROOT_DIR} && git add .')
+        # run_command(f'cd {ROOT_DIR} && git commit -m "{str(args.commit)}" ')
+        run_command(f'cd {ROOT_DIR} && git pull')
+        run_command(f'cd {ROOT_DIR} && git push origin HEAD')
+
