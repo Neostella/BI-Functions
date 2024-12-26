@@ -23,6 +23,7 @@ def get_modified_sql_files(branch_to_compare):
     run_command(f'cd {ROOT_DIR} && git checkout {branch_to_compare}')
     run_command(f'cd {ROOT_DIR} && git fetch origin')
     run_command(f'cd {ROOT_DIR} && git rebase origin/main')
+    run_command(f'cd {ROOT_DIR} && git pull')
     diff_files = run_command(f'cd {ROOT_DIR} && git diff --name-only origin/main {branch_to_compare} -- {SQL_FILES_PATH}*.sql')
     return diff_files.splitlines()
 
@@ -140,14 +141,14 @@ if __name__ == '__main__':
     if args.branch :
         main(args.branch)
     elif args.test :
-        result = subprocess.run(["liquibase.bat", "updateSQL"], cwd=CHANGELOG_DIR, capture_output=True, text=True)
+        result = subprocess.run(["liquibase.bat", "status", "--verbose"], cwd=CHANGELOG_DIR, capture_output=True, text=True)
         print(result.stdout)
     elif args.deploy :
         result = subprocess.run(["liquibase.bat", "update"], cwd=CHANGELOG_DIR, capture_output=True, text=True)
         print(result.stdout)
     elif args.commit :
-        # run_command(f'cd {ROOT_DIR} && git add .')
-        # run_command(f'cd {ROOT_DIR} && git commit -m "{str(args.commit)}" ')
+        run_command(f'cd {ROOT_DIR} && git add .')
+        run_command(f'cd {ROOT_DIR} && git commit -m "{str(args.commit)}" ')
         run_command(f'cd {ROOT_DIR} && git pull')
         run_command(f'cd {ROOT_DIR} && git push origin HEAD')
 
